@@ -1,15 +1,25 @@
-FROM node:18-alpine
+# ---------- Stage 1: Build React app ----------
+FROM node:18-alpine AS build
 
 WORKDIR /app
 
+# Install dependencies using lockfile for reproducible builds
 COPY package*.json ./
+RUN npm ci
 
-RUN npm install
-
+# Copy source and build
 COPY . .
+RUN npm run build
 
-ENV PORT=3000
+# ---------- Stage 2: Nginx to serve built files ----------
+FROM nginx:alpine
 
-EXPOSE 3000
+# Copy build output from previous stage to Nginx's html directory
+COPY --from=build /app/build /usr/share/nginx/html
 
-CMD ["npm", "start"]
+# Copy our custom nginx config (we’ll create this next)
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]
