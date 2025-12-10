@@ -3,28 +3,30 @@ FROM node:18-alpine AS build
 
 WORKDIR /app
 
-# Only copy dependency files first (max cache usage)
+# Copy only dependency files first (better caching)
 COPY package*.json ./
 
-# Install only what is needed (no optional deps)
-RUN npm ci --omit=optional || npm install --omit=optional
+# Since there is no package-lock.json, npm ci will fail.
+# So we use npm install (safe, reliable)
+RUN npm install --omit=optional
 
-# Copy project source
+# Copy actual source code
 COPY . .
 
+# Build the React app
 RUN npm run build
 
 
-# ---------- Stage 2: Final Nginx ----------
+# ---------- Stage 2: Serve with Nginx ----------
 FROM nginx:alpine
 
-# Remove default nginx files
+# Clean default nginx content
 RUN rm -rf /usr/share/nginx/html/*
 
-# Copy built React files
+# Copy React build to nginx root
 COPY --from=build /app/build /usr/share/nginx/html
 
-# Copy custom nginx config
+# Copy custom nginx config if you have one
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
