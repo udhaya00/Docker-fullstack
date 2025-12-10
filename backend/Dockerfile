@@ -4,11 +4,10 @@ WORKDIR /app
 
 COPY package*.json ./
 
-RUN npm install --only=production
+# Install only production deps
+RUN npm ci --omit=dev || npm install --omit=dev
 
 COPY . .
-
-ENV PORT=5000
 
 EXPOSE 5000
 
